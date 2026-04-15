@@ -112,6 +112,8 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = []
 
+STATICFILES_STORAGE = 'whitenoise.storage.StaticFilesStorage'
+
 
 # Cloudinary handles all uploaded media (project photos etc.)
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
