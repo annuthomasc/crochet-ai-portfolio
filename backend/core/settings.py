@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import dj_database_url
 
 load_dotenv()
 
@@ -10,12 +11,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-key-change-in-production')
 
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '.railway.app',
-    '.onrender.com',
-]
+ALLOWED_HOSTS = ['*']
 
 # ─── Apps ────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -25,7 +21,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_filters',
 
     # Third-party
     'rest_framework',
@@ -33,6 +28,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'cloudinary',
     'cloudinary_storage',
+    'django_filters',
 
     # Your apps
     'projects',
@@ -42,7 +38,8 @@ INSTALLED_APPS = [
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',        # Must be first
+    'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -74,8 +71,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ─── Database ────────────────────────────────────────────────────────────────
-import dj_database_url
-
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
 if DATABASE_URL:
@@ -103,17 +98,19 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # ─── Internationalisation ─────────────────────────────────────────────────────
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
-USE_I18N = True
-USE_TZ = True
+TIME_ZONE     = 'UTC'
+USE_I18N      = True
+USE_TZ        = True
 
-# ─── Static & Media Files ─────────────────────────────────────────────────────
-STATIC_URL = '/static/'
+# ─── Static Files ─────────────────────────────────────────────────────────────
+STATIC_URL  = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = []
+STATICFILES_STORAGE = 'whitenoise.storage.StaticFilesStorage'
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Cloudinary handles all uploaded media (project photos etc.)
+# ─── Media / Cloudinary ───────────────────────────────────────────────────────
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
@@ -121,8 +118,6 @@ CLOUDINARY_STORAGE = {
     'API_SECRET': os.getenv('CLOUDINARY_API_SECRET'),
 }
 MEDIA_URL = '/media/'
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ─── Django REST Framework ────────────────────────────────────────────────────
 REST_FRAMEWORK = {
@@ -134,8 +129,9 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 12,
-
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ],
 }
 
 # ─── JWT Settings ─────────────────────────────────────────────────────────────
@@ -147,14 +143,30 @@ SIMPLE_JWT = {
 }
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
-# Allows your React frontend to call this API
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',    # Vite dev server
+    'http://localhost:5173',
     'http://localhost:3000',
-    'https://annuthomasc.github.io', # Replace with yours
+    'http://localhost:8080',
+    'https://crochet-ai-portfolio-production.up.railway.app',
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS  = True
+CORS_ALLOW_CREDENTIALS  = True
+
+# ─── CSRF ─────────────────────────────────────────────────────────────────────
+CSRF_TRUSTED_ORIGINS = [
+    'https://crochet-ai-portfolio-production.up.railway.app',
+    'https://*.up.railway.app',
+    'https://*.railway.app',
+    'http://localhost:5173',
+    'http://localhost:8080',
+]
+
+CSRF_COOKIE_SECURE    = False
+CSRF_COOKIE_HTTPONLY  = False
+CSRF_COOKIE_SAMESITE  = 'Lax'
+SESSION_COOKIE_SECURE = False
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # ─── Claude AI ────────────────────────────────────────────────────────────────
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
@@ -175,41 +187,8 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['console'],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'level':    os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
             'propagate': False,
         },
     },
 }
-
-# ─── Production Settings ──────────────────────────────────────────────────────
-import os
-
-# Whitenoise for static files
-MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-STATICFILES_STORAGE = 'whitenoise.storage.StaticFilesStorage'
-
-# Allow Railway domain
-ALLOWED_HOSTS += [
-    '.railway.app',
-    '.up.railway.app',
-]
-
-# Security settings for production
-if not DEBUG:
-    SECURE_BROWSER_XSS_FILTER   = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS             = 'DENY'
-
-
-# ─── CSRF Settings for Production ────────────────────────────────────────────
-CSRF_TRUSTED_ORIGINS = [
-    'https://crochet-ai-portfolio-production.up.railway.app',
-    'https://*.railway.app',
-    'http://localhost:5173',
-    'http://localhost:8080',
-]
-
-SESSION_COOKIE_SECURE   = False
-CSRF_COOKIE_SECURE      = False
-CSRF_COOKIE_SAMESITE    = 'Lax'
-SESSION_COOKIE_SAMESITE = 'Lax'
