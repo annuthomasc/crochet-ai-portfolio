@@ -5,7 +5,7 @@ vision API to analyze project photos and automatically generate complete
 crochet patterns, visual stitch charts, and yarn colour palette suggestions.
 
 ## Live Demo
-- **Frontend:** https://<your-github-username>.github.io/crochet-ai-portfolio
+- **Frontend:** https://annuthomasc.github.io/crochet-ai-portfolio
 - **Backend API:** https://<your-railway-url>.railway.app/api/
 
 ## Features
