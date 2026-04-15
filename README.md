@@ -6,7 +6,7 @@ crochet patterns, visual stitch charts, and yarn colour palette suggestions.
 
 ## Live Demo
 - **Frontend:** https://annuthomasc.github.io/crochet-ai-portfolio
-- **Backend API:** https://crochet-ai-portfolio-production.up.railway.app
+- **Backend API:** https://crochet-ai-portfolio-production.up.railway.app/api/projects/
 
 ## Features
 - 📸 Photo portfolio gallery with search and category filtering
