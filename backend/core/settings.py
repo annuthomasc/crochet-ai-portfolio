@@ -107,7 +107,8 @@ USE_TZ = True
 # ─── Static & Media Files ─────────────────────────────────────────────────────
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATICFILES_DIRS = []
+
 
 # Cloudinary handles all uploaded media (project photos etc.)
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
@@ -147,7 +148,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',    # Vite dev server
     'http://localhost:3000',
-    'https://<your-github-username>.github.io',  # Replace with yours
+    'https://annuthomasc.github.io', # Replace with yours
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -177,3 +178,21 @@ LOGGING = {
     },
 }
 
+# ─── Production Settings ──────────────────────────────────────────────────────
+import os
+
+# Whitenoise for static files
+MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Allow Railway domain
+ALLOWED_HOSTS += [
+    '.railway.app',
+    '.up.railway.app',
+]
+
+# Security settings for production
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER   = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS             = 'DENY'
