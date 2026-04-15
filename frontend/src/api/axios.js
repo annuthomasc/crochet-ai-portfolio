@@ -3,7 +3,10 @@ import axios from 'axios'
 // Create a custom axios instance
 // Why? So we can set defaults once and reuse everywhere
 const api = axios.create({
-  baseURL: '/api',  // Vite proxy forwards this to Django
+  // baseURL: '/api',  // Vite proxy forwards this to Django
+  baseURL: import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL}/api`
+    : '/api',
   headers: {
     'Content-Type': 'application/json',
   },
