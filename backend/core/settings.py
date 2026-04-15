@@ -199,3 +199,17 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER   = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS             = 'DENY'
+
+
+# ─── CSRF Settings for Production ────────────────────────────────────────────
+CSRF_TRUSTED_ORIGINS = [
+    'https://crochet-ai-portfolio-production.up.railway.app',
+    'https://*.railway.app',
+    'http://localhost:5173',
+    'http://localhost:8080',
+]
+
+SESSION_COOKIE_SECURE   = False
+CSRF_COOKIE_SECURE      = False
+CSRF_COOKIE_SAMESITE    = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
