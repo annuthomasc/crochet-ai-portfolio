@@ -74,13 +74,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # ─── Database ────────────────────────────────────────────────────────────────
-# Uses SQLite locally, PostgreSQL in production via DATABASE_URL
+import dj_database_url
+
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 
-if DATABASE_URL and DATABASE_URL.startswith('postgres'):
-    import dj_database_url
+if DATABASE_URL:
     DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL)
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+        )
     }
 else:
     DATABASES = {
