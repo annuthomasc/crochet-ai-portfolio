@@ -148,7 +148,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://localhost:8080',
     'https://annuthomasc.github.io',
-    'https://crochet-ai-portfolio-production.up.railway.app',
+    # 'https://crochet-ai-portfolio-production.up.railway.app',
 ]
 
 CORS_ALLOW_ALL_ORIGINS  = True
@@ -157,8 +157,8 @@ CORS_ALLOW_CREDENTIALS  = True
 # ─── CSRF ─────────────────────────────────────────────────────────────────────
 CSRF_TRUSTED_ORIGINS = [
     'https://crochet-ai-portfolio-production.up.railway.app',
-    'https://*.up.railway.app',
     'https://*.railway.app',
+    'https://annuthomasc.github.io',
     'http://localhost:5173',
     'http://localhost:8080',
 ]
