@@ -39,7 +39,8 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 class ProjectListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for listing projects — less data over the wire."""
-    image_url = serializers.SerializerMethodField()
+    image_url  = serializers.SerializerMethodField()
+    pattern_id = serializers.SerializerMethodField()
 
     class Meta:
         model  = Project
@@ -54,9 +55,15 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'is_public',
             'yarn_colors',
             'created_at',
+            'pattern_id',
         ]
 
     def get_image_url(self, obj):
         if obj.image:
             return obj.image.url
+        return None
+
+    def get_pattern_id(self, obj):
+        if hasattr(obj, 'pattern'):
+            return obj.pattern.id
         return None

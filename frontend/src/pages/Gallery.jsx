@@ -28,7 +28,7 @@ const CATEGORIES = [
 
 function ProjectCard({ project, isPatternsPage }) {
   return (
-    <Link to={`/patterns/${project.id}`} style={{ textDecoration: 'none' }}>
+    <Link to={project.has_pattern && project.pattern_id? `/patterns/${project.pattern_id}`: `#`} style={{ textDecoration: 'none' }}>
       <div
         style={{
           backgroundColor: '#ffffff',
