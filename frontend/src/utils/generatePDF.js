@@ -371,9 +371,10 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
 
   // ─── STITCH CHART ────────────────────────────────────────────────
 
-  sectionHeader('STITCH CHART')
+  // sectionHeader('STITCH CHART')
 
   try {
+    sectionHeader('STITCH CHART')
     const chartImage = await renderStitchChartToImage(pattern)
     if (chartImage) {
       // Use a fixed generous height for good readability
