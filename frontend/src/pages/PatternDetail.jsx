@@ -93,20 +93,25 @@ export default function PatternDetail() {
   //   generatePatternPDF(pattern, pattern.project, palettes)
   //   setDownloading(false)
   // }
-  const handleDownload = async (e) => {
-    e.preventDefault()  // prevent any navigation
-    e.stopPropagation() // stop event bubbling
-    
+  const handleDownload = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDownloading(true)
+  
+    // Generate PDF immediately — don't wait for API call
     try {
-      setDownloading(true)
-      await incrementDownload(id)
-      await generatePatternPDF(pattern, pattern.project, palettes)
+      generatePatternPDF(pattern, pattern.project, palettes)
     } catch (err) {
-      console.error('PDF generation error:', err)
-      alert('PDF generation failed. Please try again.')
-    } finally {
-      setDownloading(false)
+      console.error('PDF error:', err)
     }
+  
+    // Track download separately — fire and forget
+    // Don't let this block or break the PDF download
+    incrementDownload(id).catch(err => {
+      console.log('Download tracking failed silently:', err)
+    })
+  
+    setDownloading(false)
   }
 
   if (loading) {
