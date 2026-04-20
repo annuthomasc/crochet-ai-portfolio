@@ -138,36 +138,60 @@ export default function Gallery() {
   const [search, setSearch]     = useState('')
   const [totalCount, setTotal]  = useState(0)
 
+  // useEffect(() => {
+  //   setLoading(true)
+  //   const fetchFn = category
+  //     ? getProjectsByCategory(category)
+  //     : getProjects({ search })
+
+  //   fetchFn
+  //     .then(data => {
+  //       setProjects(data.results || data || [])
+  //       setTotal(data.count || 0)
+  //       setLoading(false)
+  //     })
+  //     .catch(() => setLoading(false))
+  // }, [category])
+
+  // useEffect(() => {
+  //   const timer = setTimeout(() => {
+  //     if (!category) {
+  //       setLoading(true)
+  //       getProjects({ search })
+  //         .then(data => {
+  //           setProjects(data.results || [])
+  //           setTotal(data.count || 0)
+  //           setLoading(false)
+  //         })
+  //         .catch(() => setLoading(false))
+  //     }
+  //   }, 500)
+  //   return () => clearTimeout(timer)
+  // }, [search])
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
-    const fetchFn = category
+  
+    const fetchProjects = category
       ? getProjectsByCategory(category)
       : getProjects({ search })
-
-    fetchFn
+  
+    fetchProjects
       .then(data => {
-        setProjects(data.results || data || [])
-        setTotal(data.count || 0)
-        setLoading(false)
+        if (!cancelled) {
+          setProjects(data.results || data || [])
+          setTotal(data.count || 0)
+          setLoading(false)
+        }
       })
-      .catch(() => setLoading(false))
-  }, [category])
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!category) {
-        setLoading(true)
-        getProjects({ search })
-          .then(data => {
-            setProjects(data.results || [])
-            setTotal(data.count || 0)
-            setLoading(false)
-          })
-          .catch(() => setLoading(false))
-      }
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [search])
+      .catch(() => {
+        if (!cancelled) setLoading(false)
+      })
+  
+    return () => {
+      cancelled = true
+    }
+  }, [category, search])
 
   return (
     <div style={{ paddingTop: '40px', paddingBottom: '80px' }}>

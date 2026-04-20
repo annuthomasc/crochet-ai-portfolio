@@ -75,16 +75,30 @@ export default function PatternDetail() {
   const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
+  
+    setLoading(true)
+    setPattern(null)
+    setPalettes([])
+  
     Promise.all([
       getPattern(id),
       getColourPalettes(id)
     ])
       .then(([patternData, paletteData]) => {
-        setPattern(patternData)
-        setPalettes(paletteData)
-        setLoading(false)
+        if (!cancelled) {
+          setPattern(patternData)
+          setPalettes(paletteData)
+          setLoading(false)
+        }
       })
-      .catch(() => setLoading(false))
+      .catch(() => {
+        if (!cancelled) setLoading(false)
+      })
+  
+    return () => {
+      cancelled = true
+    }
   }, [id])
 
   // const handleDownload = async () => {
