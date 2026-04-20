@@ -388,5 +388,15 @@ export function generatePatternPDF(pattern, project, palettes = []) {
 
   // Save
   const filename = `${(pattern.title || 'pattern').replace(/\s+/g, '-').toLowerCase()}-pattern.pdf`
-  doc.save(filename)
+  
+  const pdfBlob = doc.output('blob')
+  const blobUrl = URL.createObjectURL(pdfBlob)
+  const link    = document.createElement('a')
+  link.href     = blobUrl
+  link.download = filename
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 100)
 }
