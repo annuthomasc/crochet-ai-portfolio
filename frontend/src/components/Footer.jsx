@@ -95,7 +95,7 @@ export default function Footer() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <Link to="/"             style={{ textDecoration: 'none', fontSize: '14px', color: '#9b9b9b' }}>Home</Link>
             <Link to="/gallery"      style={{ textDecoration: 'none', fontSize: '14px', color: '#9b9b9b' }}>Project Gallery</Link>
-            <Link to="/patterns"     style={{ textDecoration: 'none', fontSize: '14px', color: '#9b9b9b' }}>Patterns</Link>
+            <Link to="/patterns"     style={{ textDecoration: 'none', fontSize: '14px', color: '#9b9b9b' }}>Pattern Library</Link>
             <Link to="/ai-generator" style={{ textDecoration: 'none', fontSize: '14px', color: '#9b9b9b' }}>AI Generator</Link>
             <Link to="/upload"       style={{ textDecoration: 'none', fontSize: '14px', color: '#9b9b9b' }}>Upload Project</Link>
           </div>

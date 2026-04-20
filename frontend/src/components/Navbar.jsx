@@ -8,7 +8,7 @@ export default function Navbar() {
   const navLinks = [
     { to: '/',         label: 'Home'     },
     { to: '/gallery',  label: 'Gallery'  },
-    { to: '/patterns', label: 'Patterns' },
+    { to: '/patterns', label: 'Pattern Library' },
   ]
 
   return (

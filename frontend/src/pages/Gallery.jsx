@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { getProjects, getProjectsByCategory } from '../api/projects'
 
 const THEME = {
@@ -26,7 +26,7 @@ const CATEGORIES = [
   { value: 'other',      label: 'Other'       },
 ]
 
-function ProjectCard({ project }) {
+function ProjectCard({ project, isPatternsPage }) {
   return (
     <Link to={`/patterns/${project.id}`} style={{ textDecoration: 'none' }}>
       <div
@@ -52,6 +52,7 @@ function ProjectCard({ project }) {
           aspectRatio: '1',
           backgroundColor: THEME.creamDark,
           overflow: 'hidden',
+          position: 'relative',
         }}>
           {project.image_url ? (
             <img
@@ -65,6 +66,40 @@ function ProjectCard({ project }) {
               display: 'flex', alignItems: 'center',
               justifyContent: 'center', fontSize: '48px',
             }}>🧶</div>
+          )}
+
+          {/* Pattern badge overlay on image */}
+          {project.has_pattern && !isPatternsPage && (
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              backgroundColor: 'rgba(45, 122, 79, 0.9)',
+              color: '#ffffff',
+              fontSize: '10px',
+              fontWeight: '700',
+              padding: '3px 8px',
+              borderRadius: '20px',
+            }}>
+              Pattern ✓
+            </div>
+          )}
+
+          {/* Download badge for patterns page */}
+          {isPatternsPage && (
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              backgroundColor: 'rgba(192, 57, 43, 0.9)',
+              color: '#ffffff',
+              fontSize: '10px',
+              fontWeight: '700',
+              padding: '3px 8px',
+              borderRadius: '20px',
+            }}>
+              ⬇️ Free Download
+            </div>
           )}
         </div>
 
@@ -85,19 +120,15 @@ function ProjectCard({ project }) {
             }}>
               {project.category?.replace('_', ' ')}
             </span>
-            {project.has_pattern && (
-              <span style={{
-                fontSize: '11px',
-                color: '#2d7a4f',
-                backgroundColor: '#edf7f2',
-                padding: '2px 8px',
-                borderRadius: '20px',
-                fontWeight: '500',
-              }}>
-                Pattern ✓
-              </span>
-            )}
+            <span style={{
+              fontSize: '11px',
+              color: THEME.gray,
+              textTransform: 'capitalize',
+            }}>
+              {project.difficulty}
+            </span>
           </div>
+
           <h3 style={{
             fontSize: '15px',
             fontWeight: '600',
@@ -106,13 +137,19 @@ function ProjectCard({ project }) {
           }}>
             {project.title}
           </h3>
-          <p style={{
-            fontSize: '13px',
-            color: THEME.gray,
-            textTransform: 'capitalize',
-          }}>
-            {project.difficulty}
-          </p>
+
+          {/* Show pattern info on patterns page */}
+          {isPatternsPage && (
+            <p style={{
+              fontSize: '12px',
+              color: THEME.red,
+              fontWeight: '500',
+              marginTop: '4px',
+            }}>
+              View pattern →
+            </p>
+          )}
+
           {project.yarn_colors?.length > 0 && (
             <div style={{ display: 'flex', gap: '4px', marginTop: '10px' }}>
               {project.yarn_colors.slice(0, 5).map((color, i) => (
@@ -132,90 +169,116 @@ function ProjectCard({ project }) {
 }
 
 export default function Gallery() {
-  const [projects, setProjects] = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [category, setCategory] = useState('')
-  const [search, setSearch]     = useState('')
-  const [totalCount, setTotal]  = useState(0)
+  const location                        = useLocation()
+  const isPatternsPage                  = location.pathname === '/patterns'
+  const [projects, setProjects]         = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [category, setCategory]         = useState('')
+  const [search, setSearch]             = useState('')
+  const [totalCount, setTotal]          = useState(0)
 
-  // useEffect(() => {
-  //   setLoading(true)
-  //   const fetchFn = category
-  //     ? getProjectsByCategory(category)
-  //     : getProjects({ search })
-
-  //   fetchFn
-  //     .then(data => {
-  //       setProjects(data.results || data || [])
-  //       setTotal(data.count || 0)
-  //       setLoading(false)
-  //     })
-  //     .catch(() => setLoading(false))
-  // }, [category])
-
-  // useEffect(() => {
-  //   const timer = setTimeout(() => {
-  //     if (!category) {
-  //       setLoading(true)
-  //       getProjects({ search })
-  //         .then(data => {
-  //           setProjects(data.results || [])
-  //           setTotal(data.count || 0)
-  //           setLoading(false)
-  //         })
-  //         .catch(() => setLoading(false))
-  //     }
-  //   }, 500)
-  //   return () => clearTimeout(timer)
-  // }, [search])
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-  
+
+    // On patterns page — only fetch projects that have patterns
+    const params = {
+      search,
+      ...(isPatternsPage && { has_pattern: true }),
+    }
+
     const fetchProjects = category
       ? getProjectsByCategory(category)
-      : getProjects({ search })
-  
+      : getProjects(params)
+
     fetchProjects
       .then(data => {
         if (!cancelled) {
-          setProjects(data.results || data || [])
-          setTotal(data.count || 0)
+          let results = data.results || data || []
+
+          // Extra client-side filter for patterns page
+          if (isPatternsPage) {
+            results = results.filter(p => p.has_pattern)
+          }
+
+          setProjects(results)
+          setTotal(results.length)
           setLoading(false)
         }
       })
       .catch(() => {
         if (!cancelled) setLoading(false)
       })
-  
+
     return () => {
       cancelled = true
     }
-  }, [category, search])
+  }, [category, search, isPatternsPage])
 
   return (
     <div style={{ paddingTop: '40px', paddingBottom: '80px' }}>
 
-      {/* Header */}
+      {/* Header — different for each page */}
       <div style={{ marginBottom: '32px' }}>
-        <h1 style={{
-          fontSize: '32px',
-          fontWeight: '700',
-          color: THEME.dark,
-          marginBottom: '6px',
-        }}>
-          Project Gallery
-        </h1>
-        <p style={{ fontSize: '14px', color: THEME.gray }}>
-          {totalCount > 0 ? `${totalCount} projects` : 'All crochet projects'}
-        </p>
+
+        {isPatternsPage ? (
+          <>
+            {/* Patterns page header */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: THEME.redLight,
+              color: THEME.red,
+              fontSize: '12px',
+              fontWeight: '600',
+              padding: '4px 12px',
+              borderRadius: '20px',
+              marginBottom: '12px',
+            }}>
+              🤖 AI Generated
+            </div>
+            <h1 style={{
+              fontSize: '32px',
+              fontWeight: '700',
+              color: THEME.dark,
+              marginBottom: '6px',
+            }}>
+              Pattern Library
+            </h1>
+            <p style={{ fontSize: '14px', color: THEME.gray }}>
+              {totalCount > 0
+                ? `${totalCount} free patterns available to download`
+                : 'Browse AI-generated crochet patterns'
+              }
+            </p>
+          </>
+        ) : (
+          <>
+            {/* Gallery page header */}
+            <h1 style={{
+              fontSize: '32px',
+              fontWeight: '700',
+              color: THEME.dark,
+              marginBottom: '6px',
+            }}>
+              Project Gallery
+            </h1>
+            <p style={{ fontSize: '14px', color: THEME.gray }}>
+              {totalCount > 0
+                ? `${totalCount} handcrafted projects`
+                : 'All crochet projects'
+              }
+            </p>
+          </>
+        )}
       </div>
 
       {/* Search */}
       <div style={{ marginBottom: '20px' }}>
         <input
           type="text"
-          placeholder="Search projects..."
+          placeholder={isPatternsPage ? 'Search patterns...' : 'Search projects...'}
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{
@@ -264,6 +327,28 @@ export default function Gallery() {
         ))}
       </div>
 
+      {/* Info banner for patterns page */}
+      {isPatternsPage && !loading && projects.length > 0 && (
+        <div style={{
+          backgroundColor: THEME.redLight,
+          border: `1px solid #f5c6c2`,
+          borderRadius: '12px',
+          padding: '14px 18px',
+          marginBottom: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '14px',
+          color: THEME.red,
+        }}>
+          <span>🤖</span>
+          <span>
+            All patterns are AI-generated by Claude AI from project photos.
+            Click any pattern to view instructions and download the PDF.
+          </span>
+        </div>
+      )}
+
       {/* Grid */}
       {loading ? (
         <div style={{
@@ -278,10 +363,7 @@ export default function Gallery() {
               border: `1px solid ${THEME.creamBorder}`,
               overflow: 'hidden',
             }}>
-              <div style={{
-                aspectRatio: '1',
-                backgroundColor: THEME.creamDark,
-              }} />
+              <div style={{ aspectRatio: '1', backgroundColor: THEME.creamDark }} />
               <div style={{ padding: '16px' }}>
                 <div style={{
                   height: '10px',
@@ -305,9 +387,14 @@ export default function Gallery() {
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
           gap: '20px',
+          animation: 'fadeIn 0.2s ease-in',
         }}>
           {projects.map(project => (
-            <ProjectCard key={project.id} project={project} />
+            <ProjectCard
+              key={project.id}
+              project={project}
+              isPatternsPage={isPatternsPage}
+            />
           ))}
         </div>
       ) : (
@@ -318,23 +405,39 @@ export default function Gallery() {
           borderRadius: '16px',
           border: `1px solid ${THEME.creamBorder}`,
         }}>
-          <span style={{ fontSize: '48px' }}>🔍</span>
-          <p style={{ color: THEME.gray, marginTop: '16px', marginBottom: '16px' }}>
-            No projects found.
+          <span style={{ fontSize: '48px' }}>
+            {isPatternsPage ? '📋' : '🔍'}
+          </span>
+          <p style={{
+            color: THEME.gray,
+            marginTop: '16px',
+            marginBottom: '16px',
+            fontSize: '16px',
+          }}>
+            {isPatternsPage
+              ? 'No patterns available yet.'
+              : 'No projects found.'
+            }
           </p>
-          <button
-            onClick={() => { setCategory(''); setSearch('') }}
-            style={{
-              color: THEME.red,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: '500',
-            }}
-          >
-            Clear filters
-          </button>
+          {isPatternsPage ? (
+            <p style={{ fontSize: '13px', color: '#9b9b9b' }}>
+              Patterns are generated using AI from uploaded projects.
+            </p>
+          ) : (
+            <button
+              onClick={() => { setCategory(''); setSearch('') }}
+              style={{
+                color: THEME.red,
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+              }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       )}
     </div>
