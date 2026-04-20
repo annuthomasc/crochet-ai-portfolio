@@ -87,11 +87,26 @@ export default function PatternDetail() {
       .catch(() => setLoading(false))
   }, [id])
 
-  const handleDownload = async () => {
-    setDownloading(true)
-    await incrementDownload(id)
-    generatePatternPDF(pattern, pattern.project, palettes)
-    setDownloading(false)
+  // const handleDownload = async () => {
+  //   setDownloading(true)
+  //   await incrementDownload(id)
+  //   generatePatternPDF(pattern, pattern.project, palettes)
+  //   setDownloading(false)
+  // }
+  const handleDownload = async (e) => {
+    e.preventDefault()  // prevent any navigation
+    e.stopPropagation() // stop event bubbling
+    
+    try {
+      setDownloading(true)
+      await incrementDownload(id)
+      await generatePatternPDF(pattern, pattern.project, palettes)
+    } catch (err) {
+      console.error('PDF generation error:', err)
+      alert('PDF generation failed. Please try again.')
+    } finally {
+      setDownloading(false)
+    }
   }
 
   if (loading) {
@@ -282,6 +297,7 @@ export default function PatternDetail() {
 
             {/* Download button */}
             <button
+              type="button"
               onClick={handleDownload}
               disabled={downloading}
               style={{
