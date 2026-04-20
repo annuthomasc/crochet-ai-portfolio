@@ -9,151 +9,51 @@ function hexToRgb(hex) {
   } : { r: 192, g: 57, b: 43 }
 }
 
-async function renderStitchChartToImage(pattern) {
-  const { parseChartData, parsePatternToChart, STITCH_SYMBOLS } = await import('./generateStitchChart')
-
-  // Level 2 — use AI chart_data first, fall back to text parsing
-  const rows = pattern.chart_data && pattern.chart_data.rows?.length > 0
-    ? parseChartData(pattern.chart_data)
-    : parsePatternToChart(pattern.instructions, pattern.abbreviations)
-
-  if (rows.length === 0) return null
-
-  const SCALE     = 3
-  const cellSize  = 24 * SCALE
-  const maxStitches = Math.max(...rows.map(r => r.stitches.length))
-  const labelW    = 65 * SCALE
-  const countW    = 50 * SCALE
-  const canvasW   = labelW + maxStitches * cellSize + countW
-  const headerH   = 28 * SCALE
-  const footerH   = 36 * SCALE
-  const canvasH   = rows.length * cellSize + headerH + footerH
-
-  const canvas    = document.createElement('canvas')
-  canvas.width    = canvasW
-  canvas.height   = canvasH
-  const ctx       = canvas.getContext('2d')
-
-  // White background
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, canvasW, canvasH)
-
-  // Light grid lines
-  ctx.strokeStyle = '#ede8e3'
-  ctx.lineWidth   = 0.5 * SCALE
-
-  // Draw rows bottom to top
-  ;[...rows].reverse().forEach((row, reversedIndex) => {
-    const rowY = headerH + reversedIndex * cellSize
-
-    // Alternating row backgrounds
-    if (reversedIndex % 2 === 0) {
-      ctx.fillStyle = '#fdf9f7'
-      ctx.fillRect(labelW, rowY, maxStitches * cellSize, cellSize)
+// Text-based stitch chart — works in all environments
+// No canvas, no dynamic imports, no async needed
+function renderStitchChartAsText(pattern) {
+  try {
+    const chartData = pattern.chart_data
+    if (!chartData || !chartData.rows || chartData.rows.length === 0) {
+      return null
     }
-
-    // Row label
-    ctx.fillStyle  = '#6b6b6b'
-    ctx.font       = `${9 * SCALE}px Arial, sans-serif`
-    ctx.textAlign  = 'right'
-    ctx.fillText(row.label, labelW - 4 * SCALE, rowY + cellSize * 0.65)
-
-    // Draw each stitch
-    row.stitches.forEach((stitch, colIndex) => {
-      const cellX  = labelW + colIndex * cellSize
-      const symbol = STITCH_SYMBOLS[stitch] || STITCH_SYMBOLS['sc']
-
-      // Cell border
-      ctx.strokeStyle = '#d1d5db'
-      ctx.lineWidth   = 0.8 * SCALE
-      ctx.strokeRect(cellX, rowY, cellSize, cellSize)
-
-      // Stitch symbol
-      ctx.fillStyle  = symbol.color
-      ctx.font       = `bold ${14 * SCALE}px Arial, sans-serif`
-      ctx.textAlign  = 'center'
-      ctx.fillText(
-        symbol.symbol,
-        cellX + cellSize / 2,
-        rowY + cellSize * 0.72
-      )
+    const symbols = {
+      'ch':         '○',
+      'sc':         'x',
+      'hdc':        'T',
+      'dc':         '+',
+      'trc':        'X',
+      'sl_st':      '.',
+      'inc':        'V',
+      'dec':        'A',
+      'magic_ring': '@',
+    }
+    const lines = []
+    ;[...chartData.rows].reverse().forEach(row => {
+      const stitchRow = (row.stitches || [])
+        .slice(0, 28)
+        .map(s => symbols[s] || 'x')
+        .join(' ')
+      const label = (row.label || '').padEnd(14)
+      const count = `(${row.stitches?.length || 0})`
+      lines.push({ label, stitchRow, count })
     })
-
-    // Stitch count
-    ctx.fillStyle  = '#9ca3af'
-    ctx.font       = `${8 * SCALE}px Arial, sans-serif`
-    ctx.textAlign  = 'left'
-    ctx.fillText(
-      `(${row.stitches.length})`,
-      labelW + maxStitches * cellSize + 4 * SCALE,
-      rowY + cellSize * 0.65
-    )
-  })
-
-  // Column numbers at top (every 5)
-  ctx.fillStyle  = '#c0392b'
-  ctx.font       = `bold ${7 * SCALE}px Arial, sans-serif`
-  ctx.textAlign  = 'center'
-  for (let i = 0; i < maxStitches; i++) {
-    if ((i + 1) % 5 === 0 || i === 0) {
-      ctx.fillText(
-        String(i + 1),
-        labelW + i * cellSize + cellSize / 2,
-        headerH - 4 * SCALE
-      )
-    }
+    return lines
+  } catch (e) {
+    return null
   }
-
-  // Legend at bottom
-  const legendY      = headerH + rows.length * cellSize + 8 * SCALE
-  const legendItems  = Object.entries(STITCH_SYMBOLS).slice(0, 7)
-  const legendItemW  = (canvasW - labelW) / legendItems.length
-
-  legendItems.forEach(([key, val], i) => {
-    const lx = labelW + i * legendItemW
-
-    ctx.fillStyle  = val.color
-    ctx.font       = `bold ${10 * SCALE}px Arial, sans-serif`
-    ctx.textAlign  = 'left'
-    ctx.fillText(val.symbol, lx, legendY + 12 * SCALE)
-
-    ctx.fillStyle = '#4b5563'
-    ctx.font      = `${6.5 * SCALE}px Arial, sans-serif`
-    ctx.fillText(`${key}`, lx + 12 * SCALE, legendY + 12 * SCALE)
-  })
-
-  // Outer border
-  ctx.strokeStyle = '#ede8e3'
-  ctx.lineWidth   = 2 * SCALE
-  ctx.strokeRect(1, 1, canvasW - 2, canvasH - 2)
-
-  // Source label
-  const isAIChart = pattern.chart_data?.rows?.length > 0
-  ctx.fillStyle   = '#9b9b9b'
-  ctx.font        = `${6 * SCALE}px Arial, sans-serif`
-  ctx.textAlign   = 'right'
-  ctx.fillText(
-    isAIChart ? 'AI-generated chart data' : 'Parsed from instructions',
-    canvasW - 4 * SCALE,
-    legendY + 24 * SCALE
-  )
-
-  return canvas.toDataURL('image/png', 1.0)
 }
 
-// ─── Color helpers ────────────────────────────────────────────────────────────
-
-// Our website theme colors
 const RED        = '#c0392b'
 const RED_DARK   = '#8b1a12'
-const RED_LIGHT  = [253, 241, 240]   // rgb for light red background
-const RED_TEXT   = [192, 57,  43]    // rgb for red text
-const RED_SUB    = [245, 198, 194]   // rgb for light red subtitle text
-const DARK_TEXT  = [31,  41,  55]    // rgb for dark body text
-const GRAY_TEXT  = [107, 107, 107]   // rgb for gray text
+const RED_LIGHT  = [253, 241, 240]
+const RED_TEXT   = [192, 57,  43]
+const RED_SUB    = [245, 198, 194]
+const DARK_TEXT  = [31,  41,  55]
+const GRAY_TEXT  = [107, 107, 107]
 const WHITE      = [255, 255, 255]
 
-export async function generatePatternPDF(pattern, project, palettes = []) {
+export function generatePatternPDF(pattern, project, palettes = []) {
   const doc      = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
   const W        = 210
   const margin   = 20
@@ -177,17 +77,15 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
     doc.rect(x, rectY, w, h, 'F')
   }
 
-  const addWrappedText = (text, x, textY, maxWidth, lineHeight = 5) => {
-    const lines = doc.splitTextToSize(text || '', maxWidth)
+  const addWrappedText = (text, x, maxWidth, lineHeight = 5) => {
+    const lines = doc.splitTextToSize(String(text || ''), maxWidth)
     lines.forEach(line => {
       checkPage(lineHeight + 2)
-      doc.text(line, x, textY || y)
-      if (!textY) y += lineHeight
+      doc.text(line, x, y)
+      y += lineHeight
     })
-    return lines.length * lineHeight
   }
 
-  // Draws a section header bar in red
   const sectionHeader = (title) => {
     checkPage(20)
     colorRect(margin, y, contentW, 9, RED)
@@ -198,13 +96,11 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
     y += 13
   }
 
-  // ─── COVER PAGE ──────────────────────────────────────────────────
+  // ─── COVER ───────────────────────────────────────────────────────
 
-  // Dark red top bar
   colorRect(0, 0, W, 55, RED_DARK)
   colorRect(0, 50, W, 8, RED)
 
-  // Pattern title
   doc.setTextColor(...WHITE)
   doc.setFontSize(22)
   doc.setFont('helvetica', 'bold')
@@ -213,7 +109,6 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
     doc.text(line, margin, 20 + i * 10)
   })
 
-  // Subtitle
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(...RED_SUB)
@@ -234,7 +129,7 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
   })
   y += 36
 
-  // Stats grid — 3 columns x 2 rows
+  // Stats grid
   const stats = [
     { label: 'DIFFICULTY',    value: pattern.difficulty    || '—' },
     { label: 'HOOK SIZE',     value: pattern.hook_size     || '—' },
@@ -247,29 +142,20 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
   const statColW = contentW / 3
   const statRowH = 20
   stats.forEach((stat, i) => {
-    const col  = i % 3
-    const row  = Math.floor(i / 3)
-    const sx   = margin + col * statColW
-    const sy   = y + row * statRowH
+    const col = i % 3
+    const row = Math.floor(i / 3)
+    const sx  = margin + col * statColW
+    const sy  = y + row * statRowH
 
-    // Alternating light red backgrounds
-    doc.setFillColor(
-      col % 2 === 0 ? 253 : 250,
-      col % 2 === 0 ? 241 : 235,
-      col % 2 === 0 ? 240 : 235
-    )
+    doc.setFillColor(col % 2 === 0 ? 253 : 250, col % 2 === 0 ? 241 : 235, col % 2 === 0 ? 240 : 235)
     doc.rect(sx, sy, statColW - 1, statRowH - 1, 'F')
-
-    // Red left accent
     colorRect(sx, sy, 2, statRowH - 1, RED)
 
-    // Label
     doc.setTextColor(...RED_TEXT)
     doc.setFontSize(6.5)
     doc.setFont('helvetica', 'bold')
     doc.text(stat.label, sx + 5, sy + 7)
 
-    // Value
     doc.setTextColor(...DARK_TEXT)
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
@@ -278,7 +164,7 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
 
   y += statRowH * 2 + 8
 
-  // AI confidence badge
+  // AI badge
   doc.setFillColor(...RED_LIGHT)
   doc.roundedRect(margin, y, contentW, 11, 2, 2, 'F')
   doc.setTextColor(...RED_TEXT)
@@ -293,18 +179,15 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
   // ─── MATERIALS ───────────────────────────────────────────────────
 
   sectionHeader('MATERIALS')
-
   doc.setTextColor(...DARK_TEXT)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
 
-  const materials = pattern.materials_list || []
-  materials.forEach(item => {
+  ;(pattern.materials_list || []).forEach(item => {
     checkPage(7)
-    // Red bullet
     doc.setFillColor(...RED_TEXT)
     doc.circle(margin + 2, y - 1, 1, 'F')
-    addWrappedText(item, margin + 6, null, contentW - 6)
+    addWrappedText(item, margin + 6, contentW - 6)
     y += 1
   })
   y += 6
@@ -312,19 +195,14 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
   // ─── ABBREVIATIONS ───────────────────────────────────────────────
 
   sectionHeader('ABBREVIATIONS')
-
   const abbrevs = Object.entries(pattern.abbreviations || {})
   const abbColW = contentW / 2
 
   abbrevs.forEach(([abbr, meaning], i) => {
-    const col  = i % 2
+    const col = i % 2
     checkPage(8)
 
-    doc.setFillColor(
-      col === 0 ? 253 : 250,
-      col === 0 ? 241 : 237,
-      col === 0 ? 240 : 237
-    )
+    doc.setFillColor(col === 0 ? 253 : 250, col === 0 ? 241 : 237, col === 0 ? 240 : 237)
     doc.rect(margin + col * abbColW, y, abbColW - 1, 7, 'F')
 
     doc.setTextColor(...RED_TEXT)
@@ -334,7 +212,7 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
 
     doc.setTextColor(...GRAY_TEXT)
     doc.setFont('helvetica', 'normal')
-    doc.text(`= ${meaning}`, margin + col * abbColW + 15, y + 5)
+    doc.text(`= ${meaning}`, margin + col * abbColW + 18, y + 5)
 
     if (col === 1) y += 8
   })
@@ -344,7 +222,6 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
   // ─── INSTRUCTIONS ────────────────────────────────────────────────
 
   sectionHeader('INSTRUCTIONS')
-
   doc.setTextColor(...DARK_TEXT)
   doc.setFontSize(9)
   doc.setFont('helvetica', 'normal')
@@ -356,14 +233,14 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
       y += 3
       return
     }
-    if (line.trim().endsWith(':') || /^[A-Z\s]+:$/.test(line.trim())) {
+    if (/^[A-Z\s]+:$/.test(line.trim())) {
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(...RED_TEXT)
-      addWrappedText(line, margin, null, contentW)
+      addWrappedText(line, margin, contentW)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(...DARK_TEXT)
     } else {
-      addWrappedText(line, margin, null, contentW)
+      addWrappedText(line, margin, contentW)
     }
     y += 1
   })
@@ -371,36 +248,66 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
 
   // ─── STITCH CHART ────────────────────────────────────────────────
 
-  // sectionHeader('STITCH CHART')
+  sectionHeader('STITCH CHART')
 
-  try {
-    sectionHeader('STITCH CHART')
-    const chartImage = await renderStitchChartToImage(pattern)
-    if (chartImage) {
-      // Use a fixed generous height for good readability
-      const imgH = 100
-      checkPage(imgH + 20)
-      doc.addImage(chartImage, 'PNG', margin, y, contentW, imgH)
-      y += imgH + 8
+  const chartLines = renderStitchChartAsText(pattern)
+  if (chartLines && chartLines.length > 0) {
+    // Draw chart header
+    doc.setFillColor(245, 235, 233)
+    doc.rect(margin, y, contentW, 7, 'F')
+    doc.setTextColor(...RED_TEXT)
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    doc.text('ROW', margin + 2, y + 5)
+    doc.text('STITCHES', margin + 40, y + 5)
+    doc.text('COUNT', margin + contentW - 15, y + 5)
+    y += 9
+
+    // Draw each row
+    chartLines.forEach((row, i) => {
+      checkPage(7)
+
+      // Alternating backgrounds
+      if (i % 2 === 0) {
+        doc.setFillColor(253, 248, 247)
+        doc.rect(margin, y - 1, contentW, 6, 'F')
+      }
 
       doc.setTextColor(...GRAY_TEXT)
-      doc.setFontSize(7)
-      doc.setFont('helvetica', 'italic')
-      doc.text(
-        'Chart reads bottom to top. Each symbol represents one stitch. Column numbers shown every 5 stitches.',
-        margin, y
-      )
-      y += 10
-    } else {
+      doc.setFontSize(7.5)
+      doc.setFont('helvetica', 'bold')
+      doc.text(row.label, margin + 2, y + 4)
+
+      doc.setTextColor(...RED_TEXT)
+      doc.setFont('helvetica', 'normal')
+      doc.text(row.stitchRow, margin + 40, y + 4)
+
       doc.setTextColor(...GRAY_TEXT)
-      doc.setFontSize(9)
-      doc.text('Stitch chart not available for this pattern type.', margin, y)
-      y += 10
-    }
-  } catch (e) {
+      doc.text(row.count, margin + contentW - 14, y + 4)
+
+      y += 6
+    })
+
+    y += 6
+
+    // Legend
+    doc.setFillColor(245, 235, 233)
+    doc.rect(margin, y, contentW, 10, 'F')
+    doc.setTextColor(...RED_TEXT)
+    doc.setFontSize(7)
+    doc.setFont('helvetica', 'bold')
+    doc.text('SYMBOLS:', margin + 2, y + 4)
+    doc.setFont('helvetica', 'normal')
+    doc.setTextColor(...DARK_TEXT)
+    doc.text('○=ch  x=sc  T=hdc  +=dc  X=trc  .=sl st  V=inc  A=dec', margin + 22, y + 4)
+    doc.setTextColor(...GRAY_TEXT)
+    doc.text('Chart reads bottom to top', margin + 2, y + 8.5)
+    y += 14
+
+  } else {
     doc.setTextColor(...GRAY_TEXT)
     doc.setFontSize(9)
-    doc.text('Stitch chart could not be rendered.', margin, y)
+    doc.text('Stitch chart not available — regenerate pattern for chart data.', margin, y)
     y += 10
   }
 
@@ -410,15 +317,12 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
 
   if (pattern.notes) {
     sectionHeader('NOTES')
-
-    // Warm cream notes box
     doc.setFillColor(255, 251, 245)
     doc.rect(margin, y, contentW, 4, 'F')
-
     doc.setTextColor(...GRAY_TEXT)
     doc.setFont('helvetica', 'italic')
     doc.setFontSize(9)
-    addWrappedText(pattern.notes, margin + 3, null, contentW - 6)
+    addWrappedText(pattern.notes, margin + 3, contentW - 6)
     y += 6
   }
 
@@ -431,7 +335,6 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
     palettes.forEach(palette => {
       checkPage(40)
 
-      // Palette name + mood
       doc.setTextColor(...DARK_TEXT)
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(10)
@@ -443,19 +346,17 @@ export async function generatePatternPDF(pattern, project, palettes = []) {
       doc.text(`Mood: ${palette.mood}`, margin + 70, y)
       y += 6
 
-      // Color swatches
-      const swatchW = contentW / palette.colors.length - 2
-      palette.colors.forEach((color, i) => {
+      const swatchW = contentW / (palette.colors?.length || 3) - 2
+      ;(palette.colors || []).forEach((color, i) => {
         const { r, g, b } = hexToRgb(color)
         doc.setFillColor(r, g, b)
         doc.rect(margin + i * (swatchW + 2), y, swatchW, 14, 'F')
 
-        // Color name below swatch
         doc.setTextColor(...GRAY_TEXT)
         doc.setFontSize(7)
         doc.setFont('helvetica', 'normal')
         doc.text(
-          palette.color_names[i] || color,
+          (palette.color_names?.[i] || color).slice(0, 15),
           margin + i * (swatchW + 2),
           y + 18,
           { maxWidth: swatchW }
