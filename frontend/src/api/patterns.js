@@ -20,8 +20,14 @@ export const getColourPalettes = async (patternId) => {
 
 // Track when user downloads a pattern
 export const incrementDownload = async (patternId) => {
-  const response = await api.post(`/patterns/${patternId}/increment_download/`)
-  return response.data
+  try {
+    const response = await api.post(`/patterns/${patternId}/increment_download/`)
+    return response.data
+  } catch (err) {
+    // Silently fail — don't block download or redirect
+    console.log('Download count update skipped')
+    return null
+  }
 }
 
 // Filter by difficulty

@@ -52,7 +52,7 @@ api.interceptors.response.use(
         // Refresh failed — clear tokens and redirect to login
         localStorage.removeItem('access_token')
         localStorage.removeItem('refresh_token')
-        window.location.href = '/#/login'
+        window.location.href = '/crochet-ai-portfolio/#/login'
         return Promise.reject(refreshError)
       }
     }

@@ -42,7 +42,7 @@ class PatternViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[permissions.AllowAny])
     def increment_download(self, request, pk=None):
         """Called by frontend when user downloads the pattern."""
         pattern = self.get_object()
